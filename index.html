@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" class="swarm-preboot">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="SPECTRA Industrial Color Metrology Engine — ISO/CIE 11664-6 & ASTM D2244 Real-Time Computer Vision Colorimeter Suite with CIEDE2000 Tolerance Matrix.">
+  <meta name="theme-color" content="#101318">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph / Enterprise Metadata -->
+  <meta property="og:title" content="SPECTRA Industrial — Vision Colorimeter Suite">
+  <meta property="og:description" content="Hardware-accelerated ISO 11664-6 & CIEDE2000 optical colorimetry workbench with real-time spatial variance and specular outlier rejection.">
+  <meta property="og:type" content="website">
+
+  <title>SPECTRA Industrial — Vision Colorimeter Suite</title>
+
+  <!-- Instant Pre-Boot Cloak: Ensures Swarm Rebuild starts at 0ms on page open with zero UI flash -->
+  <script>
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('swarm-preboot');
+    } else {
+      document.documentElement.classList.remove('swarm-preboot');
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "SPECTRA.METROLOGY Vision Colorimeter Suite",
+    "applicationCategory": "ScientificApplication",
+    "operatingSystem": "All",
+    "description": "ISO 11664-6 & CIEDE2000 Computer Vision Colorimeter Suite"
+  }
+  </script>
+</head>
+<body>
+  <a href="#mainWorkbench" class="skip-link">Skip to Metrology Workbench</a>
+
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="app-navbar" id="navHeaderBar" role="banner">
+      <div class="brand-cluster">
+        <div class="brand-emblem" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <h1 class="brand-title">
+            <span class="brand-text">SPECTRA</span><span class="brand-period">.</span><span class="brand-ext">METROLOGY</span>
+          </h1>
+          <span class="brand-sub">ASTM D2244 / ISO 11664-6</span>
+        </div>
+      </div>
+
+      <div class="nav-metrics" role="region" aria-label="Sensor Telemetry Status">
+        <div class="telemetry-pill" id="navStatusPill">
+          <span class="status-beacon" id="streamIndicator" aria-hidden="true"></span>
+          <span id="streamStatus" aria-live="polite">SENSOR STANDBY</span>
+        </div>
+        <div class="telemetry-pill font-mono" id="deviceFpsChip" aria-label="Processing Frame Rate">0.0 FPS</div>
+      </div>
+
+      <div class="nav-controls">
+        <button type="button" id="startSwarmRebuild" class="btn btn-swarm-trigger" aria-label="Replay 20-Agent Swarm Reconstruction">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+          <span class="btn-label-text">Swarm Rebuild (20)</span>
+        </button>
+
+        <div class="segmented-control" id="kernelSelector" role="radiogroup" aria-label="Sampling Kernel Engine Rate">
+          <button type="button" id="modeQuick" class="segment-btn active" role="radio" aria-checked="true">50Hz Dynamic</button>
+          <button type="button" id="modePrecision" class="segment-btn" role="radio" aria-checked="false">32px Kernel</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workbench-grid" id="mainWorkbench">
+      <!-- Left Column: Optical Target & Viewport -->
+      <section class="chamber-section" aria-label="Optical Sensor Viewport">
+        <div id="noticeBanner" class="system-alert-banner" role="alert" aria-live="assertive" hidden></div>
+
+        <div class="viewport-card" id="viewportCard" tabindex="0" role="application" aria-label="Interactive Optical Sampling Target. Use arrow keys or pointer to position reticle.">
+          <div class="viewport-surface">
+            <video id="cameraStream" autoplay playsinline webkit-playsinline muted preload="auto"></video>
+            <img id="staticImagePreview" alt="Uploaded static sample feed for colorimetry inspection" hidden />
+            <canvas id="samplerCanvas" aria-hidden="true"></canvas>
+            <input type="file" id="fileUploadInput" accept="image/*" class="sr-only" aria-label="Upload sample image file">
+          </div>
+
+          <!-- Dynamic Reticle -->
+          <div class="reticle-assembly" id="reticle" aria-hidden="true">
+            <div class="reticle-ring"></div>
+            <div class="reticle-crosshair ch-top"></div>
+            <div class="reticle-crosshair ch-bottom"></div>
+            <div class="reticle-crosshair ch-left"></div>
+            <div class="reticle-crosshair ch-right"></div>
+            <div class="reticle-lens" id="reticleColorCore"></div>
+          </div>
+
+          <div class="viewport-overlay-foot" id="viewportPrompt">
+            Initialize sensor or drag-and-drop an image sample
+          </div>
+
+          <!-- Offline / Standby Chamber Poster -->
+          <div class="chamber-poster" id="stageCover">
+            <div class="poster-icon-ring" id="posterIconRing" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+            <h2 class="poster-heading">Optical Sensor Chamber Ready</h2>
+            <p class="poster-details">Hardware-accelerated colorimetry pipeline runs with 0ms server latency. Simulated reference loaded in telemetry deck.</p>
+            <div class="poster-actions" id="posterActionGroup">
+              <button type="button" id="btnCoverPower" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Engage Live Sensor</span>
+              </button>
+              <button type="button" id="btnCoverUpload" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Upload Sample File</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hardware & Session Toolbar -->
+        <div class="chamber-toolbar" id="chamberToolbar" role="toolbar" aria-label="Sensor Hardware Controls">
+          <div class="toolbar-group" id="toolbarSensorGroup">
+            <button type="button" id="btnPower" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Power Sensor</span>
+            </button>
+            <button type="button" id="btnFlip" class="btn btn-secondary" disabled title="Toggle camera facing mode">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M20 10c0-4.4-3.6-8-8-8s-8 3.6-8 8m0 4c0 4.4 3.6 8 8 8s8-3.6 8-8"></path>
+                <polyline points="1 10 4 10 4 7"></polyline>
+                <polyline points="23 14 20 14 20 17"></polyline>
+              </svg>
+              <span>Flip Lens</span>
+            </button>
+            <button type="button" id="btnUpload" class="btn btn-secondary" title="Load Still Image Sample">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Load Image</span>
+            </button>
+          </div>
+
+          <div class="toolbar-group" id="toolbarLockGroup">
+            <button type="button" id="btnLock" class="btn btn-warning" disabled aria-pressed="false">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span id="lockText">Hold Lock</span>
+            </button>
+            <button type="button" id="btnSave" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span>Log Reading</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Metrology Deck -->
+      <section class="telemetry-section" aria-label="Colorimetry Telemetry and Analytics">
+        <!-- Hero Primary Coordinate Card -->
+        <article class="panel-card hero-reading-card" id="heroReadingCard">
+          <div class="panel-header" id="heroPanelHeader">
+            <h2 class="panel-label">Primary Coordinate</h2>
+            <span class="badge-tag" id="scanMethod">TRIMMED MEAN (20PX)</span>
+          </div>
+
+          <div class="hero-split">
+            <div class="swatch-container" id="swatchContainer">
+              <div class="color-monolith" id="targetSwatch" role="img" aria-label="Sampled color swatch preview">
+                <div class="sheen-glare" aria-hidden="true"></div>
+              </div>
+              <div class="contrast-badge" id="contrastBadge">WCAG: --</div>
+            </div>
+
+            <div class="meta-container" id="metaContainer">
+              <h3 class="color-name-title" id="colorName">Sensor Disconnected</h3>
+              <div class="hex-readout-row" id="hexReadoutRow">
+                <span class="hex-val font-mono" id="hexDisplay">#------</span>
+                <button type="button" class="mini-copy-pill" id="copyHex" aria-label="Copy HEX Color Code">HEX</button>
+                <button type="button" class="mini-copy-pill" id="copyRgb" aria-label="Copy RGB Color Vector">RGB</button>
+              </div>
+
+              <!-- Chromatic Breakdown Bars -->
+              <div class="chroma-bars" id="chromaBars" aria-hidden="true">
+                <div class="chroma-track"><div class="chroma-fill fill-r" id="barR"></div></div>
+                <div class="chroma-track"><div class="chroma-fill fill-g" id="barG"></div></div>
+                <div class="chroma-track"><div class="chroma-fill fill-b" id="barB"></div></div>
+              </div>
+              <span class="rgb-label font-mono" id="rgbVector">RGB: (---, ---, ---)</span>
+            </div>
+          </div>
+
+          <div class="gauges-grid" id="gaugesGrid">
+            <div class="gauge-unit" id="gaugeReliability">
+              <div class="gauge-meta">
+                <span>Signal Reliability</span>
+                <span id="qualityPercent" class="font-mono">0%</span>
+              </div>
+              <div class="gauge-track" role="progressbar" aria-label="Signal Reliability" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="qualityTrack">
+                <div class="gauge-fill" id="qualityFill"></div>
+              </div>
+            </div>
+            <div class="gauge-unit" id="gaugeVariance">
+              <div class="gauge-meta">
+                <span>Spatial Variance</span>
+                <span id="varianceValue" class="font-mono">&plusmn;0.00</span>
+              </div>
+              <div class="gauge-track" role="progressbar" aria-label="Spatial Variance" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="varianceTrack">
+                <div class="gauge-fill" id="varianceFill"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Dynamic CIEDE2000 Matrix -->
+        <article class="panel-card" id="matrixPanelCard">
+          <div class="panel-header">
+            <h2 class="panel-label">CIEDE2000 Tolerance Matrix</h2>
+            <span class="panel-sublabel font-mono">&Delta;E00 Ranked</span>
+          </div>
+          <div class="shade-matrix-grid" id="shadeMatrix" role="list" aria-label="CIEDE2000 Color Shade Variations"></div>
+        </article>
+
+        <!-- Illuminants & Coordinates Accordion -->
+        <article class="panel-card" id="coordinatesPanelCard">
+          <button type="button" class="panel-header accordion-head" id="detailsAccordion" aria-expanded="true" aria-controls="accordionBody">
+            <span class="panel-label">Scientific Coordinates &amp; Illuminants</span>
+            <svg class="chevron-icon rotated" id="accIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="accordion-panel expanded" id="accordionBody" role="region" aria-labelledby="detailsAccordion">
+            <dl class="param-table font-mono">
+              <div class="param-row"><dt>CIE L*a*b* (D65/2&deg;)</dt><dd id="labCoords">--</dd></div>
+              <div class="param-row"><dt>CIE XYZ (Tristimulus)</dt><dd id="xyzCoords">--</dd></div>
+              <div class="param-row"><dt>Cylindrical HSL</dt><dd id="hslCoords">--</dd></div>
+              <div class="param-row"><dt>Normalized Lum (Y)</dt><dd id="lumCoords">--</dd></div>
+              <div class="param-row"><dt>Specular Outliers</dt><dd id="outliersCoords">0.0%</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <!-- Recorded Log Registers -->
+        <article class="panel-card" id="sessionBufferCard">
+          <div class="panel-header">
+            <h2 class="panel-label">Session Buffer</h2>
+            <div class="log-actions">
+              <button type="button" class="text-btn" id="exportLog">Export CSV</button>
+              <span class="divider-dot" aria-hidden="true">&bull;</span>
+              <button type="button" class="text-btn text-danger" id="clearLog">Flush</button>
+            </div>
+          </div>
+          <div class="history-strip" id="logScroller" role="list" aria-label="Recorded Color Readings">
+            <div class="empty-state">No recorded points in memory</div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <!-- Enterprise Status Footer -->
+    <footer class="app-footer" role="contentinfo">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="font-mono footer-code">SPECTRA.OS v4.2</span>
+          <span class="footer-sep">&bull;</span>
+          <span>Zero-Latency Client-Side Optical Colorimetry</span>
+        </div>
+        <div class="footer-standards font-mono">
+          <span>CIE 1976 (L*, a*, b*)</span>
+          <span class="footer-sep">&bull;</span>
+          <span>Illuminant D65 / 2&deg; Standard Observer</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Interactive Toast -->
+    <div id="toastNotification" class="toast-capsule" role="status" aria-live="polite"></div>
+  </div>
+
+  <!-- Unified Application & Swarm Engine Script -->
+  <script src="script.js"></script>
+</body>
+</html>
